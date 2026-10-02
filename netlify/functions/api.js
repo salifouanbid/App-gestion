@@ -10,7 +10,7 @@ const MAX_ADMINS_PER_HOUSEHOLD = 3;
 const WORDS = ['RENARD', 'TIGRE', 'LOUTRE', 'FAUCON', 'ZEBRE', 'LYNX', 'PANDA', 'KOALA', 'IGUANE', 'ORQUE', 'PUMA', 'HERON', 'MARMOTTE', 'CIGOGNE', 'HIBOU'];
 const COLORS = ['#3f6b5e', '#c98a2b', '#6b7fb5', '#b0503f', '#7a6b9e', '#4a8a8a'];
 
-const APPWRITE_ENDPOINT = (process.env.APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1').replace(/\/$/, '');
+const APPWRITE_ENDPOINT = (process.env.APPWRITE_ENDPOINT || '').replace(/\/$/, '');
 const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
 const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
 const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'foyer-taches';
@@ -18,8 +18,8 @@ const APPWRITE_COLLECTION_ID = process.env.APPWRITE_COLLECTION_ID || 'foyer-tach
 let appwriteReady;
 
 async function appwriteRequest(path, options = {}) {
-  if (!APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
-    throw new Error('APPWRITE_PROJECT_ID et APPWRITE_API_KEY doivent être configurés côté serveur.');
+  if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
+    throw new Error('APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID et APPWRITE_API_KEY doivent être configurés côté serveur.');
   }
   const response = await fetch(`${APPWRITE_ENDPOINT}${path}`, {
     ...options,

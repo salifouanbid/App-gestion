@@ -56,7 +56,7 @@ les codes PIN ne quittent jamais le serveur en clair.
 ### 4. Configure Appwrite dans Netlify
 Dans **Site configuration → Environment variables**, ajoute :
 
-- `APPWRITE_ENDPOINT` = `https://fra.cloud.appwrite.io/v1`
+- `APPWRITE_ENDPOINT` = l'endpoint régional affiché dans la console Appwrite
 - `APPWRITE_PROJECT_ID` = l'identifiant du projet Appwrite
 - `APPWRITE_API_KEY` = la clé API serveur, jamais exposée au frontend
 
