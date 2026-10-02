@@ -10,9 +10,8 @@ les uns des autres et un espace développeur pour tout superviser.
 - **`netlify/functions/api.js`** : le backend. Une seule "fonction serverless"
   Node.js qui gère toutes les routes selon le chemin et la méthode HTTP
   (un peu comme un mini-Express fait à la main).
-- **Netlify Blobs** (`@netlify/blobs`) : la base de données. Un simple
-  stockage clé → valeur JSON, intégré à Netlify, sans service externe à
-  configurer.
+- **Appwrite Databases** : le backend stocke un document JSON par clé dans
+  une base et une collection Appwrite créées automatiquement au premier appel.
 - **`netlify.toml`** : dit à Netlify où sont le site statique et les
   fonctions, et redirige `/api/*` vers la fonction.
 
@@ -54,9 +53,18 @@ les codes PIN ne quittent jamais le serveur en clair.
 - Redéploie le site (Deploys → Trigger deploy) pour que la variable soit
   prise en compte.
 
-### 4. Netlify Blobs
-Rien à faire — c'est activé automatiquement dès que le site tourne sur
-Netlify. Pas de compte ni de clé API à créer.
+### 4. Configure Appwrite dans Netlify
+Dans **Site configuration → Environment variables**, ajoute :
+
+- `APPWRITE_ENDPOINT` = `https://fra.cloud.appwrite.io/v1`
+- `APPWRITE_PROJECT_ID` = l'identifiant du projet Appwrite
+- `APPWRITE_API_KEY` = la clé API serveur, jamais exposée au frontend
+
+Les variables facultatives `APPWRITE_DATABASE_ID` et
+`APPWRITE_COLLECTION_ID` peuvent rester absentes : les valeurs
+`foyer-taches` seront utilisées. La base, la collection et l'attribut `data`
+sont initialisés automatiquement au premier appel. La clé API doit avoir les
+permissions serveur Databases nécessaires.
 
 ### 5. Teste
 Ouvre l'URL que Netlify t'a donnée (ex. `https://ton-site.netlify.app`).
@@ -71,8 +79,9 @@ cd ce-dossier
 npm install
 netlify dev
 ```
-`netlify dev` lance le site + les fonctions localement (avec un stockage
-Blobs local simulé) sur `http://localhost:8888`.
+`netlify dev` lance le site + les fonctions localement sur
+`http://localhost:8888`. En local, les mêmes variables Appwrite doivent être
+présentes dans l'environnement du terminal.
 
 ## Limites à connaître
 

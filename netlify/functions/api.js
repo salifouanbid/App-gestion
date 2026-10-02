@@ -1,10 +1,8 @@
 // ============================================================
 // API backend — Netlify Function
 // Toutes les routes /api/* passent par ici (voir netlify.toml).
-// Stockage : Netlify Blobs (clé -> valeur JSON), équivalent
-// d'une petite base de données intégrée à Netlify.
+// Stockage : Appwrite Databases (un document JSON par clé).
 // ============================================================
-const { getStore } = require('@netlify/blobs');
 const crypto = require('crypto');
 
 const STORE_NAME = 'foyer-taches';
@@ -12,8 +10,114 @@ const MAX_ADMINS_PER_HOUSEHOLD = 3;
 const WORDS = ['RENARD', 'TIGRE', 'LOUTRE', 'FAUCON', 'ZEBRE', 'LYNX', 'PANDA', 'KOALA', 'IGUANE', 'ORQUE', 'PUMA', 'HERON', 'MARMOTTE', 'CIGOGNE', 'HIBOU'];
 const COLORS = ['#3f6b5e', '#c98a2b', '#6b7fb5', '#b0503f', '#7a6b9e', '#4a8a8a'];
 
-function store() {
-  return getStore(STORE_NAME);
+const APPWRITE_ENDPOINT = (process.env.APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1').replace(/\/$/, '');
+const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
+const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
+const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'foyer-taches';
+const APPWRITE_COLLECTION_ID = process.env.APPWRITE_COLLECTION_ID || 'foyer-taches';
+let appwriteReady;
+
+async function appwriteRequest(path, options = {}) {
+  if (!APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
+    throw new Error('APPWRITE_PROJECT_ID et APPWRITE_API_KEY doivent être configurés côté serveur.');
+  }
+  const response = await fetch(`${APPWRITE_ENDPOINT}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Appwrite-Project': APPWRITE_PROJECT_ID,
+      'X-Appwrite-Key': APPWRITE_API_KEY,
+      ...(options.headers || {})
+    }
+  });
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message: text }; }
+  if (!response.ok) {
+    const error = new Error(data.message || `Appwrite HTTP ${response.status}`);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+async function ensureAppwrite() {
+  if (appwriteReady) return appwriteReady;
+  appwriteReady = (async () => {
+    try {
+      await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}`);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      await appwriteRequest('/databases', {
+        method: 'POST',
+        body: JSON.stringify({ databaseId: APPWRITE_DATABASE_ID, name: 'Tâches ménagères', enabled: true })
+      });
+    }
+    try {
+      await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}`);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections`, {
+        method: 'POST',
+        body: JSON.stringify({ collectionId: APPWRITE_COLLECTION_ID, name: 'Données de l’application', documentSecurity: false, enabled: true })
+      });
+    }
+    try {
+      await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/attributes/data`);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/attributes/string`, {
+        method: 'POST',
+        body: JSON.stringify({ key: 'data', size: 1000000, required: true })
+      });
+      // Appwrite crée les attributs de façon asynchrone.
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        try {
+          const attribute = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/attributes/data`);
+          if (attribute.status === 'available') break;
+        } catch (_) {}
+      }
+    }
+  })();
+  try { await appwriteReady; } catch (error) { appwriteReady = null; throw error; }
+}
+
+function documentId(key) {
+  return key === 'households-index' ? 'households-index' : key.replace(/:/g, '_');
+}
+
+async function getData(key) {
+  await ensureAppwrite();
+  try {
+    const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(documentId(key))}`);
+    return doc.data ? JSON.parse(doc.data) : null;
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+}
+
+async function setData(key, value) {
+  await ensureAppwrite();
+  const id = documentId(key);
+  const data = JSON.stringify(value);
+  try {
+    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ data }) });
+  } catch (error) {
+    if (error.status !== 404) throw error;
+    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents`, { method: 'POST', body: JSON.stringify({ documentId: id, data }) });
+  }
+}
+
+async function deleteData(key) {
+  await ensureAppwrite();
+  try {
+    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(documentId(key))}`, { method: 'DELETE' });
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
 }
 
 function json(status, data) {
@@ -54,28 +158,28 @@ function verifyPin(pin, stored) {
 
 // --- Accès aux données ---
 async function getHousehold(code) {
-  return await store().get(`household:${code}`, { type: 'json' });
+  return await getData(`household:${code}`);
 }
 async function saveHousehold(h) {
   h.updatedAt = new Date().toISOString();
-  await store().setJSON(`household:${h.code}`, h);
+  await setData(`household:${h.code}`, h);
 }
 async function getIndex() {
-  return (await store().get('households-index', { type: 'json' })) || [];
+  return (await getData('households-index')) || [];
 }
 async function saveIndex(idx) {
-  await store().setJSON('households-index', idx);
+  await setData('households-index', idx);
 }
 
 // --- Sessions : un jeton aléatoire -> { code, role, adminId } ---
 async function createSession(payload) {
   const token = crypto.randomBytes(24).toString('hex');
-  await store().setJSON(`session:${token}`, { ...payload, createdAt: Date.now() });
+  await setData(`session:${token}`, { ...payload, createdAt: Date.now() });
   return token;
 }
 async function getSession(token) {
   if (!token) return null;
-  return await store().get(`session:${token}`, { type: 'json' });
+  return await getData(`session:${token}`);
 }
 
 // --- Ne jamais renvoyer les hachages de PIN au client ---
@@ -146,7 +250,7 @@ exports.handler = async (event) => {
       const session = await getSession(token);
       if (!session || !session.dev) return json(401, { error: 'Non autorisé.' });
       const code = m[1];
-      await store().delete(`household:${code}`);
+      await deleteData(`household:${code}`);
       let idx = await getIndex();
       idx = idx.filter(e => e.code !== code);
       await saveIndex(idx);
