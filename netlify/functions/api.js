@@ -438,6 +438,7 @@ exports.handler = async (event) => {
 
     return json(404, { error: 'Route inconnue : ' + method + ' ' + path });
   } catch (err) {
+    console.error('API error:', err && err.message ? err.message : String(err));
     return json(500, { error: 'Erreur serveur.', detail: String((err && err.message) || err) });
   }
 };
