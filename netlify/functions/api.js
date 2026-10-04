@@ -85,6 +85,10 @@ async function ensureAppwrite() {
 }
 
 function documentId(key) {
+  if (key.startsWith('household:')) {
+    const code = key.slice('household:'.length);
+    return `h_${crypto.createHash('sha256').update(code).digest('hex').slice(0, 34)}`;
+  }
   if (key.startsWith('session:')) {
     return `s_${crypto.createHash('sha256').update(key).digest('hex').slice(0, 34)}`;
   }
@@ -93,13 +97,17 @@ function documentId(key) {
 
 async function getData(key) {
   await ensureAppwrite();
-  try {
-    const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(documentId(key))}`);
-    return doc.data && doc.data.data ? JSON.parse(doc.data.data) : null;
-  } catch (error) {
-    if (error.status === 404) return null;
-    throw error;
+  const ids = [documentId(key)];
+  if (key.startsWith('household:')) ids.push(`household_${key.slice('household:'.length)}`);
+  for (const id of ids) {
+    try {
+      const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`);
+      return doc.data && doc.data.data ? JSON.parse(doc.data.data) : null;
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
   }
+  return null;
 }
 
 async function setData(key, value) {
