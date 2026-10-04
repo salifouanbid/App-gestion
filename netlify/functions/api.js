@@ -99,12 +99,14 @@ async function getData(key) {
   await ensureAppwrite();
   const ids = [documentId(key)];
   if (key.startsWith('household:')) ids.push(`household_${key.slice('household:'.length)}`);
+  console.log('Appwrite read:', key.startsWith('household:') ? 'household' : key.split(':')[0], ids);
   for (const id of ids) {
     try {
       const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`);
       return doc.data && doc.data.data ? JSON.parse(doc.data.data) : null;
     } catch (error) {
       if (error.status !== 404) throw error;
+      console.warn('Appwrite document not found:', id);
     }
   }
   return null;
@@ -113,6 +115,7 @@ async function getData(key) {
 async function setData(key, value) {
   await ensureAppwrite();
   const id = documentId(key);
+  console.log('Appwrite write:', key.startsWith('household:') ? 'household' : key.split(':')[0], id);
   const data = JSON.stringify(value);
   try {
     await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ data: { data } }) });
