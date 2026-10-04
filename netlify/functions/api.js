@@ -85,6 +85,9 @@ async function ensureAppwrite() {
 }
 
 function documentId(key) {
+  if (key.startsWith('session:')) {
+    return `s_${crypto.createHash('sha256').update(key).digest('hex').slice(0, 34)}`;
+  }
   return key === 'households-index' ? 'households-index' : key.replace(/:/g, '_');
 }
 
