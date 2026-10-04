@@ -92,7 +92,7 @@ async function getData(key) {
   await ensureAppwrite();
   try {
     const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(documentId(key))}`);
-    return doc.data ? JSON.parse(doc.data) : null;
+    return doc.data && doc.data.data ? JSON.parse(doc.data.data) : null;
   } catch (error) {
     if (error.status === 404) return null;
     throw error;
@@ -104,10 +104,10 @@ async function setData(key, value) {
   const id = documentId(key);
   const data = JSON.stringify(value);
   try {
-    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ data }) });
+    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ data: { data } }) });
   } catch (error) {
     if (error.status !== 404) throw error;
-    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents`, { method: 'POST', body: JSON.stringify({ documentId: id, data }) });
+    await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents`, { method: 'POST', body: JSON.stringify({ documentId: id, data: { data } }) });
   }
 }
 
