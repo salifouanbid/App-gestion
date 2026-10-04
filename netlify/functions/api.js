@@ -103,7 +103,9 @@ async function getData(key) {
   for (const id of ids) {
     try {
       const doc = await appwriteRequest(`/databases/${APPWRITE_DATABASE_ID}/collections/${APPWRITE_COLLECTION_ID}/documents/${encodeURIComponent(id)}`);
-      return doc.data && doc.data.data ? JSON.parse(doc.data.data) : null;
+      const raw = doc.data && Object.prototype.hasOwnProperty.call(doc.data, 'data') ? doc.data.data : doc.data;
+      if (raw === null || raw === undefined || raw === '') return null;
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (error) {
       if (error.status !== 404) throw error;
       console.warn('Appwrite document not found:', id);
