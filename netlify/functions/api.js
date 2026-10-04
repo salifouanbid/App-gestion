@@ -174,15 +174,21 @@ async function saveIndex(idx) {
   await setData('households-index', idx);
 }
 
-// --- Sessions : un jeton aléatoire -> { code, role, adminId } ---
+// --- Sessions signées : le jeton ne contient aucun secret et n'est pas stocké en base ---
 async function createSession(payload) {
-  const token = crypto.randomBytes(24).toString('hex');
-  await setData(`session:${token}`, { ...payload, createdAt: Date.now() });
-  return token;
+  const encoded = Buffer.from(JSON.stringify({ ...payload, createdAt: Date.now() })).toString('base64url');
+  const signature = crypto.createHmac('sha256', APPWRITE_API_KEY).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
 }
 async function getSession(token) {
   if (!token) return null;
-  return await getData(`session:${token}`);
+  const [encoded, signature] = String(token).split('.');
+  if (!encoded || !signature || !APPWRITE_API_KEY) return null;
+  const expected = crypto.createHmac('sha256', APPWRITE_API_KEY).update(encoded).digest('base64url');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try { return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')); } catch (_) { return null; }
 }
 
 // --- Ne jamais renvoyer les hachages de PIN au client ---
