@@ -350,6 +350,20 @@
 
             <section class="panel">
                 <div class="panel-head">
+                <h2>Combien de batiments</h2>
+                    <span class="count">${household.home.length}</span>
+                </div>
+                <form id="house_number1">
+                <input type="number" id="common_house" placeholder="Combien de batiment a nettoyer en commun" required>
+                <button type="submit">Voila</button>
+                </form>
+                <form id="house_number2">
+                <input type="number" id="different_house" placeholder="Combien de batiment en a nettoyer par groupe" required>
+                <button type="submit">Voila</button>
+                </form>
+            </section>
+            <section class="panel">
+                <div class="panel-head">
                     <h2>Tâches</h2>
                     <span class="count">${household.tasks.length}</span>
                 </div>
