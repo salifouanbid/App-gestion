@@ -1,7 +1,8 @@
-# Tâches ménagères — multi-foyers
+# Tâches ménagères — internat multi-bâtiments
 
-Petite app de gestion des tâches ménagères, avec plusieurs foyers isolés
-les uns des autres et un espace développeur pour tout superviser.
+Application de gestion du nettoyage d'un internat composé de plusieurs
+bâtiments, avec un espace privé par internat et un espace développeur pour
+superviser les internats créés.
 
 ## Comment c'est construit (pour comprendre le code)
 
@@ -12,6 +13,14 @@ les uns des autres et un espace développeur pour tout superviser.
   (un peu comme un mini-Express fait à la main).
 - **Appwrite Databases** : le backend stocke un document JSON par clé dans
   une base et une collection Appwrite créées automatiquement au premier appel.
+- **Bâtiments** : chaque internat possède des bâtiments résidentiels et peut
+  déclarer des bâtiments communs. Les résidents appartiennent à un bâtiment
+  résidentiel et les tâches sont rattachées à un bâtiment précis.
+- **Rotation hebdomadaire** : les tâches des bâtiments communs sont affectées
+  à tour de rôle aux résidents des bâtiments résidentiels. Une affectation
+  manuelle exclut la personne des autres affectations automatiques de la même
+  répartition. Un bâtiment en déficit de résidents participe à la rotation
+  commune une fois par mois.
 - **`netlify.toml`** : dit à Netlify où sont le site statique et les
   fonctions, et redirige `/api/*` vers la fonction.
 

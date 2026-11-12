@@ -86,11 +86,24 @@ ul { list-style: none; padding: 0; margin: 0; }
 .person-list li:last-child, .task-list li:last-child, .history-list li:last-child, .admin-manage-list li:last-child, .dev-list li:last-child { border-bottom: none; }
 .tag { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .person-name, .admin-name { flex: 1; }
+.person-building, .task-building { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+.person-building { max-width: 150px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--paper); }
 .presence-toggle { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
 .presence-toggle input { accent-color: var(--sage); cursor: pointer; }
 .presence-static { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
 .task-text { flex: 1; cursor: pointer; }
 .task-assignee { font-size: 0.8rem; color: var(--muted); background: var(--paper); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.task-mode { font-size: 0.72rem; color: var(--sage-dark); border: 1px solid var(--border); border-radius: 999px; padding: 2px 7px; }
+.task-building-heading { display: block !important; padding: 12px 4px 5px !important; color: var(--sage-dark); font-size: 0.82rem; font-weight: 700; border-bottom: 1px solid var(--border); }
+.building-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.building-row { display: flex; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
+.building-row:last-child { border-bottom: none; }
+.building-name { flex: 1; font-weight: 600; }
+.building-badge { font-size: 0.72rem; color: var(--sage-dark); background: var(--done-bg); border-radius: 999px; padding: 3px 8px; }
+.building-badge.common { color: #855b17; background: #f8ecd4; }
+.settings-panel-head { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.rotation-summary { border-left: 4px solid var(--ochre); }
+.rotation-warning { color: #855b17; background: #f8ecd4; border-radius: 6px; padding: 8px 10px; font-size: 0.82rem; margin: 8px 0 0; }
 .task-list li.completed .task-text { text-decoration: line-through; color: var(--muted); }
 .task-list li.completed { background-color: var(--done-bg); }
 .delete-btn { background: none; border: none; color: var(--danger); font-size: 1.1rem; line-height: 1; padding: 4px 6px; cursor: pointer; font-weight: 400; }
