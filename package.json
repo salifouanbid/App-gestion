@@ -2,8 +2,6 @@
   "name": "foyer-taches",
   "version": "1.0.0",
   "private": true,
-  "description": "Gestion des tâches ménagères multi-foyers — backend Netlify Functions + Netlify Blobs",
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  }
+  "description": "Gestion des tâches ménagères multi-foyers — backend Netlify Functions + Appwrite",
+  "dependencies": {}
 }
