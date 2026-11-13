@@ -104,6 +104,7 @@ ul { list-style: none; padding: 0; margin: 0; }
 .settings-panel-head { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
 .rotation-summary { border-left: 4px solid var(--ochre); }
 .rotation-warning { color: #855b17; background: #f8ecd4; border-radius: 6px; padding: 8px 10px; font-size: 0.82rem; margin: 8px 0 0; }
+.rotation-ok { color: var(--sage-dark); background: var(--done-bg); border-radius: 6px; padding: 8px 10px; font-size: 0.82rem; margin: 8px 0 0; }
 .task-list li.completed .task-text { text-decoration: line-through; color: var(--muted); }
 .task-list li.completed { background-color: var(--done-bg); }
 .delete-btn { background: none; border: none; color: var(--danger); font-size: 1.1rem; line-height: 1; padding: 4px 6px; cursor: pointer; font-weight: 400; }

@@ -139,7 +139,8 @@ function distribute(h) {
     return person;
   };
   commonTasks.forEach((task, i) => {
-    const sources = [...eligibleBuildings, ...monthlyDeficitBuildings.filter(b => !monthlyUsed.has(b.id))];
+    const preferredSources = [...eligibleBuildings, ...monthlyDeficitBuildings.filter(b => !monthlyUsed.has(b.id))];
+    const sources = preferredSources.length ? preferredSources : normalBuildings.filter(b => activePeople(h, b.id).some(p => !blockedByManual.has(p.id)));
     if (!sources.length) return;
     const building = sources[i % sources.length];
     const person = choosePerson(building, usedForCommonThisRun);
@@ -151,13 +152,19 @@ function distribute(h) {
   normalTasks.forEach(task => {
     const building = normalBuildings.find(b => b.id === task.buildingId);
     if (!building) return;
-    const person = choosePerson(building, assignedAuto);
+    let sourceBuilding = building;
+    let person = choosePerson(building, assignedAuto);
+    if (!person) {
+      sourceBuilding = normalBuildings.find(candidate => candidate.id !== building.id && activePeople(h, candidate.id).some(p => !blockedByManual.has(p.id))) || building;
+      person = sourceBuilding === building ? null : choosePerson(sourceBuilding, assignedAuto);
+    }
     if (!person) return;
     task.assigneeId = person.id; task.assignmentMode = 'auto'; assignedAuto.add(person.id);
-    assignments.push({ taskId: task.id, taskText: task.text, personId: person.id, personName: person.name, fromBuildingId: person.buildingId, fromBuildingName: building.name, buildingId: task.buildingId, buildingName: building.name, mode: 'auto' });
+    assignments.push({ taskId: task.id, taskText: task.text, personId: person.id, personName: person.name, fromBuildingId: person.buildingId, fromBuildingName: sourceBuilding.name, buildingId: task.buildingId, buildingName: building.name, mode: sourceBuilding.id === building.id ? 'auto' : 'auto-overflow' });
   });
-  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
-  return { assignments, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
+  const unassignedTaskIds = h.tasks.filter(t => !t.completed && !t.assigneeId).map(t => t.id);
+  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, unassignedTaskIds, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
+  return { assignments, unassignedTaskIds, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
 }
 
 exports.handler = async (event) => {
