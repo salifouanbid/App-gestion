@@ -44,6 +44,15 @@
         return p ? p.color : '#c8c3b6';
     }
 
+    function buildingName(buildingId) {
+        const b = household.buildings.find(b => b.id === buildingId);
+        return b ? b.name : 'Bâtiment non défini';
+    }
+
+    function buildingOptions(includeCommon) {
+        return household.buildings.filter(b => includeCommon || !b.common).map(b => `<option value="${b.id}">${escapeHtml(b.name)}${b.common ? ' · commun' : ''}</option>`).join('');
+    }
+
     function isAdmin() { return role === 'admin' && !!currentAdminId; }
 
     function persistSession(t, c, r, aId) {
@@ -132,15 +141,15 @@
                 </div>
             </div>
             <div class="role-card">
-                <h1>Tâches ménagères</h1>
+                <h1>Nettoyage de l’internat</h1>
                 <p class="tagline">Chaque foyer a son propre espace, privé et partageable.</p>
                 <div class="role-buttons">
                     <button type="button" id="goCreate" class="role-btn">
-                        Créer l'espace de mon foyer
-                        <span class="role-btn-sub">Nouveau foyer, nouveau code d'accès</span>
+                        Créer l’espace de mon internat
+                        <span class="role-btn-sub">Nouvel internat, nouveau code d'accès</span>
                     </button>
                     <button type="button" id="goJoin" class="role-btn role-btn-secondary">
-                        Rejoindre mon foyer
+                        Rejoindre mon internat
                         <span class="role-btn-sub">J'ai déjà un code d'accès</span>
                     </button>
                 </div>
@@ -156,10 +165,10 @@
         root.innerHTML = `
         <div class="role-chooser">
             <div class="role-card">
-                <h1>Nouveau foyer</h1>
+                <h1>Nouvel internat</h1>
                 <p class="tagline">Tu deviens le premier responsable de ce foyer.</p>
                 <form id="createForm" class="pin-form">
-                    <label for="hName">Nom du foyer</label>
+                    <label for="hName">Nom de l’internat</label>
                     <input type="text" id="hName" placeholder="Ex. Famille Dossou" required>
                     <label for="aName">Ton nom</label>
                     <input type="text" id="aName" placeholder="Ton nom" required>
@@ -197,7 +206,7 @@
             root.innerHTML = `
             <div class="role-chooser">
                 <div class="role-card">
-                    <h1>Rejoindre mon foyer</h1>
+                    <h1>Rejoindre mon internat</h1>
                     <p class="tagline">Entre le code d'accès de ton foyer.</p>
                     <form id="codeForm" class="pin-form">
                         <label for="codeInput">Code du foyer</label>
@@ -309,7 +318,7 @@
         }
     }
 
-    // --- Application (espace foyer) ---
+    // --- Application (espace internat) ---
     async function refreshHousehold() {
         const data = await api(`/households/${code}/data`);
         household = data.household;
@@ -318,6 +327,8 @@
     function renderApp() {
         const me = household.admins.find(a => a.id === currentAdminId);
         const roleLabel = role === 'admin' ? `Espace Responsable — ${escapeHtml(me ? me.name : '')}` : 'Espace Exécutant';
+        const latestRotation = household.history.length ? household.history[household.history.length - 1] : null;
+        const commonNames = household.buildings.filter(b => b.common).map(b => b.name);
 
         root.innerHTML = `
         <div class="app">
@@ -325,7 +336,7 @@
                 <div class="app-header-top">
                     <div>
                         <h1>${escapeHtml(household.name)}</h1>
-                        <p class="tagline">Qui fait quoi à la maison, et ce qu'il reste à faire.</p>
+                        <p class="tagline">Organisation du nettoyage de l’internat, bâtiment par bâtiment.</p>
                     </div>
                     <div class="role-status">
                         <span class="role-badge">${roleLabel}</span>
@@ -335,13 +346,20 @@
                 </div>
             </header>
 
+            <section class="panel rotation-summary">
+                <div class="panel-head"><h2>Rotation de la semaine</h2><span class="count">${latestRotation ? escapeHtml(latestRotation.weekKey || 'historique') : 'à générer'}</span></div>
+                <p class="hint">Bâtiments communs : ${commonNames.length ? escapeHtml(commonNames.join(', ')) : 'aucun pour le moment'}.</p>
+                ${latestRotation ? `<p class="hint">${latestRotation.assignments.length} affectation(s), dont ${latestRotation.assignments.filter(a => a.buildingId && household.buildings.find(b => b.id === a.buildingId)?.common).length} pour les bâtiments communs.</p>${latestRotation.unassignedTaskIds?.length ? `<p class="rotation-warning">${latestRotation.unassignedTaskIds.length} tâche(s) restent en attente : une seule tâche maximum est attribuée par personne.</p>` : '<p class="rotation-ok">Toutes les tâches possibles sont affectées.</p>'}${typeof latestRotation.remainingPeopleCount === 'number' && latestRotation.remainingPeopleCount > 0 ? `<p class="hint">${latestRotation.remainingPeopleCount} personne(s) restante(s) sans tâche cette semaine.</p>` : ''}${latestRotation.deficientBuildingIds?.length ? `<p class="rotation-warning">Bâtiments en déficit : ${latestRotation.deficientBuildingIds.map(id => escapeHtml(buildingName(id))).join(', ')}</p>` : ''}` : '<p class="empty-state">Lance « Répartir les tâches » pour générer la rotation de cette semaine.</p>'}
+            </section>
+
             <section class="panel">
                 <div class="panel-head">
-                    <h2>Membres du foyer</h2>
+                    <h2>Résidents de l’internat</h2>
                     <span class="count">${household.persons.length}</span>
                 </div>
                 <form id="personForm" class="inline-form admin-only">
-                    <input type="text" id="personInput" placeholder="Nom de la personne" required>
+                    <input type="text" id="personInput" placeholder="Nom du résident" required>
+                    <select id="personBuilding" required>${buildingOptions(false)}</select>
                     <button type="submit">Ajouter</button>
                 </form>
                 <ul class="person-list" id="personList"></ul>
@@ -368,16 +386,17 @@
                     <span class="count">${household.tasks.length}</span>
                 </div>
                 <form id="taskForm" class="inline-form admin-only">
-                    <input type="text" id="taskInput" placeholder="Nouvelle tâche" required>
+                    <input type="text" id="taskInput" placeholder="Tâche de nettoyage" required>
+                    <select id="taskBuilding" required>${buildingOptions(true)}</select>
                     <select id="taskAssignee">
-                        <option value="">Non assigné</option>
+                        <option value="">Affectation automatique</option>
                         ${household.persons.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
                     </select>
                     <button type="submit">Ajouter</button>
                 </form>
                 <div class="distribute-row admin-only">
                     <button type="button" id="distributeBtn" class="secondary-btn">Répartir les tâches</button>
-                    <span class="hint">Tâches non terminées, réparties entre les personnes présentes.</span>
+                    <span class="hint">La rotation tient compte des bâtiments communs, des absences et des affectations manuelles.</span>
                 </div>
                 <p class="hint exec-only">Coche une tâche une fois terminée.</p>
                 <ul class="task-list" id="taskList"></ul>
@@ -396,7 +415,16 @@
             </section>
 
             <section class="panel admin-only">
-                <div class="panel-head"><h2>Paramètres du Responsable</h2></div>
+                <div class="panel-head"><h2>Bâtiments de l’internat</h2><span class="count">${household.buildings.length}</span></div>
+                <form id="buildingForm" class="inline-form">
+                    <input type="text" id="buildingInput" placeholder="Nom du bâtiment" required>
+                    <label class="presence-toggle"><input type="checkbox" id="buildingCommon"> bâtiment commun</label>
+                    <button type="submit">Ajouter</button>
+                </form>
+                <ul class="building-list" id="buildingList"></ul>
+                <p class="hint">Un bâtiment commun reçoit des tâches nettoyées par rotation par les résidents des autres bâtiments.</p>
+
+                <div class="panel-head settings-panel-head"><h2>Paramètres du responsable</h2></div>
                 <h3 class="settings-subhead">Mon code PIN</h3>
                 <form id="pinChangeForm" class="inline-form">
                     <input type="password" id="currentPinInput" placeholder="Code PIN actuel" autocomplete="off" required>
@@ -416,7 +444,7 @@
                 <p class="form-msg" id="addAdminMsg"></p>
                 ` : `<p class="hint">Nombre maximum de responsables atteint (${MAX_ADMINS}). Retire-en un pour en ajouter un autre.</p>`}
 
-                <h3 class="settings-subhead">Code d'accès du foyer</h3>
+                <h3 class="settings-subhead">Code d’accès de l’internat</h3>
                 <p class="hint">Partage ce code avec les membres du foyer pour qu'ils rejoignent l'espace : <strong>${code}</strong></p>
             </section>
         </div>`;
@@ -426,15 +454,16 @@
         renderPersons();
         renderTasks();
         renderHistory();
-        if (role === 'admin') renderAdminManageList();
+        if (role === 'admin') { renderBuildings(); renderAdminManageList(); }
 
         document.getElementById('personForm').onsubmit = async (e) => {
             e.preventDefault();
             const input = document.getElementById('personInput');
             const nameVal = input.value.trim();
-            if (!nameVal) return;
+            const buildingId = document.getElementById('personBuilding').value;
+            if (!nameVal || !buildingId) return;
             try {
-                const data = await api(`/households/${code}/persons`, { method: 'POST', body: { name: nameVal } });
+                const data = await api(`/households/${code}/persons`, { method: 'POST', body: { name: nameVal, buildingId } });
                 household = data.household;
                 renderApp();
             } catch (err) { alert(err.message); }
@@ -444,10 +473,11 @@
             e.preventDefault();
             const input = document.getElementById('taskInput');
             const assignee = document.getElementById('taskAssignee');
+            const taskBuilding = document.getElementById('taskBuilding');
             const textVal = input.value.trim();
-            if (!textVal) return;
+            if (!textVal || !taskBuilding.value) return;
             try {
-                const data = await api(`/households/${code}/tasks`, { method: 'POST', body: { text: textVal, assigneeId: assignee.value || '' } });
+                const data = await api(`/households/${code}/tasks`, { method: 'POST', body: { text: textVal, buildingId: taskBuilding.value, assigneeId: assignee.value || '' } });
                 household = data.household;
                 renderApp();
             } catch (err) { alert(err.message); }
@@ -459,6 +489,18 @@
                 const data = await api(`/households/${code}/distribute`, { method: 'POST' });
                 household = data.household;
                 renderApp();
+            } catch (err) { alert(err.message); }
+        };
+
+        const buildingForm = document.getElementById('buildingForm');
+        if (buildingForm) buildingForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('buildingInput').value.trim();
+            const common = document.getElementById('buildingCommon').checked;
+            if (!name) return;
+            try {
+                const data = await api(`/households/${code}/buildings`, { method: 'POST', body: { name, common } });
+                household = data.household; renderApp();
             } catch (err) { alert(err.message); }
         };
 
@@ -516,6 +558,19 @@
             tag.className = 'tag'; tag.style.backgroundColor = person.color;
             const name = document.createElement('span');
             name.className = 'person-name'; name.textContent = person.name;
+            const building = document.createElement('select');
+            building.className = 'person-building admin-only';
+            building.innerHTML = buildingOptions(false);
+            building.value = person.buildingId;
+            building.addEventListener('change', async () => {
+                try {
+                    const data = await api(`/households/${code}/persons/${person.id}`, { method: 'PATCH', body: { buildingId: building.value } });
+                    household = data.household;
+                    renderApp();
+                } catch (err) { alert(err.message); }
+            });
+            const buildingStatic = document.createElement('span');
+            buildingStatic.className = 'person-building exec-only'; buildingStatic.textContent = buildingName(person.buildingId);
 
             const presenceLabel = document.createElement('label');
             presenceLabel.className = 'presence-toggle admin-only';
@@ -543,7 +598,7 @@
                 } catch (err) { alert(err.message); }
             });
 
-            li.append(tag, name, presenceLabel, presenceStatic, del);
+            li.append(tag, name, building, buildingStatic, presenceLabel, presenceStatic, del);
             personList.appendChild(li);
         });
     }
@@ -551,13 +606,22 @@
     function renderTasks() {
         const taskList = document.getElementById('taskList');
         taskList.innerHTML = '';
-        household.tasks.forEach(task => {
+        household.buildings.forEach(building => {
+            const buildingTasks = household.tasks.filter(task => task.buildingId === building.id);
+            if (!buildingTasks.length) return;
+            const heading = document.createElement('li');
+            heading.className = 'task-building-heading';
+            heading.textContent = `${building.name}${building.common ? ' · bâtiment commun' : ''}`;
+            taskList.appendChild(heading);
+            buildingTasks.forEach(task => {
             const li = document.createElement('li');
             li.className = task.completed ? 'completed' : '';
             const tag = document.createElement('span');
             tag.className = 'tag'; tag.style.backgroundColor = task.assigneeId ? colorFor(task.assigneeId) : '#d8d4cb';
             const text = document.createElement('span');
             text.className = 'task-text'; text.textContent = task.text;
+            const building = document.createElement('span');
+            building.className = 'task-building'; building.textContent = buildingName(task.buildingId);
             text.addEventListener('click', async () => {
                 try {
                     const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: !task.completed } });
@@ -565,13 +629,30 @@
                     renderApp();
                 } catch (err) { alert(err.message); }
             });
-            li.append(tag, text);
+            li.append(tag, text, building);
+            if (task.assignmentMode) {
+                const mode = document.createElement('span');
+                mode.className = 'task-mode'; mode.textContent = task.assignmentMode === 'manual' ? 'manuel' : 'auto';
+                li.appendChild(mode);
+            }
             const assignedPerson = household.persons.find(p => p.id === task.assigneeId);
             if (assignedPerson) {
                 const badge = document.createElement('span');
                 badge.className = 'task-assignee'; badge.textContent = assignedPerson.name;
                 li.appendChild(badge);
             }
+            const assignment = document.createElement('select');
+            assignment.className = 'task-assignment admin-only';
+            assignment.innerHTML = `<option value="">Automatique</option>${household.persons.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}`;
+            assignment.value = task.assignmentMode === 'manual' ? task.assigneeId : '';
+            assignment.addEventListener('change', async () => {
+                try {
+                    const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { assigneeId: assignment.value } });
+                    household = data.household;
+                    renderApp();
+                } catch (err) { alert(err.message); }
+            });
+            li.appendChild(assignment);
             const del = document.createElement('button');
             del.className = 'delete-btn admin-only'; del.textContent = '×';
             del.addEventListener('click', async () => {
@@ -583,6 +664,7 @@
             });
             li.appendChild(del);
             taskList.appendChild(li);
+            });
         });
     }
 
@@ -604,11 +686,46 @@
                 const line = document.createElement('div');
                 const personSpan = document.createElement('span');
                 personSpan.className = 'person'; personSpan.textContent = a.personName + ' : ';
-                line.append(personSpan, document.createTextNode(a.taskText));
+                const target = a.buildingName ? ` → ${a.buildingName}` : '';
+                const mode = a.mode ? ` (${a.mode})` : '';
+                line.append(personSpan, document.createTextNode((a.taskText || 'tâche') + target + mode));
                 body.appendChild(line);
             });
             li.append(head, body);
             historyList.appendChild(li);
+        });
+    }
+
+    function renderBuildings() {
+        const list = document.getElementById('buildingList');
+        if (!list) return;
+        list.innerHTML = '';
+        household.buildings.forEach(building => {
+            const li = document.createElement('li');
+            li.className = 'building-row';
+            const label = document.createElement('span');
+            label.className = 'building-name'; label.textContent = building.name;
+            const badge = document.createElement('span');
+            badge.className = building.common ? 'building-badge common' : 'building-badge';
+            badge.textContent = building.common ? 'commun' : 'résidentiel';
+            li.append(label, badge);
+            const rename = document.createElement('button');
+            rename.className = 'secondary-btn'; rename.textContent = 'Renommer';
+            rename.onclick = async () => {
+                const name = prompt('Nouveau nom du bâtiment', building.name);
+                if (!name || !name.trim()) return;
+                try { const data = await api(`/households/${code}/buildings/${building.id}`, { method: 'PATCH', body: { name: name.trim() } }); household = data.household; renderApp(); }
+                catch (err) { alert(err.message); }
+            };
+            const toggle = document.createElement('button');
+            toggle.className = 'secondary-btn'; toggle.textContent = building.common ? 'Rendre résidentiel' : 'Rendre commun';
+            toggle.onclick = async () => {
+                try { const data = await api(`/households/${code}/buildings/${building.id}`, { method: 'PATCH', body: { common: !building.common } }); household = data.household; renderApp(); }
+                catch (err) { alert(err.message); }
+            };
+            const del = document.createElement('button'); del.className = 'delete-btn'; del.textContent = '×';
+            del.onclick = async () => { if (!confirm(`Supprimer ${building.name} ?`)) return; try { const data = await api(`/households/${code}/buildings/${building.id}`, { method: 'DELETE' }); household = data.household; renderApp(); } catch (err) { alert(err.message); } };
+            li.append(rename, toggle, del); list.appendChild(li);
         });
     }
 
@@ -712,7 +829,7 @@
                 <div class="app-header-top">
                     <div>
                         <h1>Espace développeur</h1>
-                        <p class="tagline">${details.length} foyer(s) enregistré(s) au total.</p>
+                        <p class="tagline">${details.length} internat(s) enregistré(s) au total.</p>
                     </div>
                     <div class="role-status">
                         <button type="button" id="refreshDev" class="secondary-btn">Actualiser</button>
