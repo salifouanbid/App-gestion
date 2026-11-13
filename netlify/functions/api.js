@@ -130,8 +130,7 @@ function distribute(h) {
   const monthlyDeficitBuildings = weekOfMonth() === 1 ? normalBuildings.filter(b => deficient.has(b.id)) : [];
   const monthlyUsed = new Set();
   const choosePerson = (building, avoid = new Set()) => {
-    let people = activePeople(h, building.id).filter(p => !blockedByManual.has(p.id) && !avoid.has(p.id));
-    if (!people.length) people = activePeople(h, building.id).filter(p => !blockedByManual.has(p.id));
+    const people = activePeople(h, building.id).filter(p => !blockedByManual.has(p.id) && !avoid.has(p.id));
     if (!people.length) return null;
     const index = Number(h.weeklyRotation.indexByBuilding[building.id] || 0) % people.length;
     const person = people[index];
@@ -142,8 +141,9 @@ function distribute(h) {
     const preferredSources = [...eligibleBuildings, ...monthlyDeficitBuildings.filter(b => !monthlyUsed.has(b.id))];
     const sources = preferredSources.length ? preferredSources : normalBuildings.filter(b => activePeople(h, b.id).some(p => !blockedByManual.has(p.id)));
     if (!sources.length) return;
-    const building = sources[i % sources.length];
-    const person = choosePerson(building, usedForCommonThisRun);
+    const building = sources.slice(i % sources.length).concat(sources.slice(0, i % sources.length)).find(candidate => activePeople(h, candidate.id).some(p => !blockedByManual.has(p.id) && !usedForCommonThisRun.has(p.id) && !assignedAuto.has(p.id)));
+    if (!building) return;
+    const person = choosePerson(building, new Set([...usedForCommonThisRun, ...assignedAuto]));
     if (!person) return;
     if (deficient.has(building.id)) monthlyUsed.add(building.id);
     task.assigneeId = person.id; task.assignmentMode = 'auto'; usedForCommonThisRun.add(person.id); assignedAuto.add(person.id);
@@ -155,7 +155,7 @@ function distribute(h) {
     let sourceBuilding = building;
     let person = choosePerson(building, assignedAuto);
     if (!person) {
-      sourceBuilding = normalBuildings.find(candidate => candidate.id !== building.id && activePeople(h, candidate.id).some(p => !blockedByManual.has(p.id))) || building;
+      sourceBuilding = normalBuildings.find(candidate => candidate.id !== building.id && activePeople(h, candidate.id).some(p => !blockedByManual.has(p.id) && !assignedAuto.has(p.id))) || building;
       person = sourceBuilding === building ? null : choosePerson(sourceBuilding, assignedAuto);
     }
     if (!person) return;
@@ -163,8 +163,11 @@ function distribute(h) {
     assignments.push({ taskId: task.id, taskText: task.text, personId: person.id, personName: person.name, fromBuildingId: person.buildingId, fromBuildingName: sourceBuilding.name, buildingId: task.buildingId, buildingName: building.name, mode: sourceBuilding.id === building.id ? 'auto' : 'auto-overflow' });
   });
   const unassignedTaskIds = h.tasks.filter(t => !t.completed && !t.assigneeId).map(t => t.id);
-  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, unassignedTaskIds, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
-  return { assignments, unassignedTaskIds, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
+  const assignedPeople = new Set([...blockedByManual, ...assignedAuto]);
+  const activePeopleCount = h.persons.filter(p => p.present).length;
+  const remainingPeopleCount = h.persons.filter(p => p.present && !assignedPeople.has(p.id)).length;
+  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, unassignedTaskIds, remainingPeopleCount, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
+  return { assignments, unassignedTaskIds, remainingPeopleCount, activePeopleCount, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
 }
 
 exports.handler = async (event) => {
