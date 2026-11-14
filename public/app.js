@@ -664,10 +664,15 @@
             const dateLabel = document.createElement('span');
             dateLabel.textContent = new Date(entry.date).toLocaleString('fr-FR');
             const countLabel = document.createElement('span');
-            countLabel.textContent = `${entry.assignments.length} tâche(s)`;
+            const currentAssignedCount = household.tasks.filter(task => !task.completed && task.assigneeId).length;
+            const totalAssignedCount = typeof entry.totalAssignedCount === 'number' ? entry.totalAssignedCount : (entry.assignments.length || currentAssignedCount);
+            countLabel.textContent = `${totalAssignedCount} tâche(s) attribuée(s) au total`;
             head.append(dateLabel, countLabel);
             const body = document.createElement('div');
             body.className = 'history-assignments';
+            if (!entry.assignments.length && totalAssignedCount > 0) {
+                body.textContent = 'Les tâches étaient déjà attribuées ; aucune nouvelle affectation n’a été nécessaire.';
+            }
             entry.assignments.forEach(a => {
                 const line = document.createElement('div');
                 const personSpan = document.createElement('span');
