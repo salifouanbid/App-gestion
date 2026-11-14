@@ -169,8 +169,14 @@ function distribute(h) {
   const activePeopleCount = h.persons.filter(p => p.present).length;
   const remainingPeopleCount = h.persons.filter(p => p.present && !assignedPeople.has(p.id)).length;
   const totalAssignedCount = h.tasks.filter(t => !t.completed && !!t.assigneeId).length;
-  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
-  return { assignments, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, activePeopleCount, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
+  const assignmentSnapshot = h.tasks.filter(t => !t.completed && t.assigneeId).map(task => {
+    const person = h.persons.find(p => p.id === task.assigneeId);
+    const sourceBuilding = normalBuildings.find(b => b.id === person?.buildingId) || h.buildings.find(b => b.id === person?.buildingId);
+    const targetBuilding = h.buildings.find(b => b.id === task.buildingId);
+    return { taskId: task.id, taskText: task.text, personId: task.assigneeId, personName: person?.name || 'Personne supprimée', fromBuildingId: person?.buildingId || '', fromBuildingName: sourceBuilding?.name || 'Bâtiment inconnu', buildingId: task.buildingId, buildingName: targetBuilding?.name || 'Bâtiment inconnu', mode: task.assignmentMode || 'manuel' };
+  });
+  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments: assignmentSnapshot, newAssignments: assignments.length, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
+  return { assignments: assignmentSnapshot, newAssignments: assignments.length, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, activePeopleCount, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
 }
 
 exports.handler = async (event) => {
