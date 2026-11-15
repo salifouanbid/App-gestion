@@ -368,20 +368,6 @@
 
             <section class="panel">
                 <div class="panel-head">
-                <h2>Combien de batiments</h2>
-                    <span class="count">${household.home.length}</span>
-                </div>
-                <form id="house_number1">
-                <input type="number" id="common_house" placeholder="Combien de batiment a nettoyer en commun" required>
-                <button type="submit">Voila</button>
-                </form>
-                <form id="house_number2">
-                <input type="number" id="different_house" placeholder="Combien de batiment en a nettoyer par groupe" required>
-                <button type="submit">Voila</button>
-                </form>
-            </section>
-            <section class="panel">
-                <div class="panel-head">
                     <h2>Tâches</h2>
                     <span class="count">${household.tasks.length}</span>
                 </div>
@@ -615,7 +601,8 @@
             taskList.appendChild(heading);
             buildingTasks.forEach(task => {
             const li = document.createElement('li');
-            li.className = task.completed ? 'completed' : '';
+            const validationStatus = task.validationStatus || (task.completed ? 'validated' : 'assigned');
+            li.className = task.completed ? 'completed' : (validationStatus === 'declared' ? 'declared' : (validationStatus === 'rejected' ? 'rejected' : ''));
             const tag = document.createElement('span');
             tag.className = 'tag'; tag.style.backgroundColor = task.assigneeId ? colorFor(task.assigneeId) : '#d8d4cb';
             const text = document.createElement('span');
@@ -623,8 +610,9 @@
             const building = document.createElement('span');
             building.className = 'task-building'; building.textContent = buildingName(task.buildingId);
             text.addEventListener('click', async () => {
+                if (role !== 'admin' && (task.completed || validationStatus === 'declared')) return;
                 try {
-                    const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: !task.completed } });
+                    const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: role === 'admin' ? !task.completed : true } });
                     household = data.household;
                     renderApp();
                 } catch (err) { alert(err.message); }
@@ -634,6 +622,19 @@
                 const mode = document.createElement('span');
                 mode.className = 'task-mode'; mode.textContent = task.assignmentMode === 'manual' ? 'manuel' : 'auto';
                 li.appendChild(mode);
+            }
+            const status = document.createElement('span');
+            status.className = 'task-validation-status';
+            status.textContent = validationStatus === 'validated' ? 'validée' : validationStatus === 'declared' ? 'à valider' : validationStatus === 'rejected' ? 'à refaire' : 'à faire';
+            li.appendChild(status);
+            if (role === 'exec' && !task.completed && validationStatus !== 'declared') {
+                const declare = document.createElement('button');
+                declare.className = 'secondary-btn validation-btn'; declare.textContent = 'Déclarer terminée';
+                declare.onclick = async () => {
+                    try { const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: true } }); household = data.household; renderApp(); }
+                    catch (err) { alert(err.message); }
+                };
+                li.appendChild(declare);
             }
             const assignedPerson = household.persons.find(p => p.id === task.assigneeId);
             if (assignedPerson) {
@@ -653,6 +654,21 @@
                 } catch (err) { alert(err.message); }
             });
             li.appendChild(assignment);
+            if (role === 'admin' && validationStatus === 'declared') {
+                const validate = document.createElement('button');
+                validate.className = 'secondary-btn validation-btn'; validate.textContent = 'Valider';
+                validate.onclick = async () => {
+                    try { const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { validationStatus: 'validated' } }); household = data.household; renderApp(); }
+                    catch (err) { alert(err.message); }
+                };
+                const reject = document.createElement('button');
+                reject.className = 'secondary-btn validation-btn reject-btn'; reject.textContent = 'À refaire';
+                reject.onclick = async () => {
+                    try { const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { validationStatus: 'rejected' } }); household = data.household; renderApp(); }
+                    catch (err) { alert(err.message); }
+                };
+                li.append(validate, reject);
+            }
             const del = document.createElement('button');
             del.className = 'delete-btn admin-only'; del.textContent = '×';
             del.addEventListener('click', async () => {

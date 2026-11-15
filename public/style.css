@@ -114,6 +114,12 @@ ul { list-style: none; padding: 0; margin: 0; }
 .history-entry-head { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
 .history-assignments { display: flex; flex-direction: column; gap: 3px; font-size: 0.9rem; }
 .history-assignments span.person { font-weight: 600; color: var(--sage-dark); }
+.task-validation-status { font-size: 0.72rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 7px; white-space: nowrap; }
+.task-list li.declared { background: #fff8e8; }
+.task-list li.declared .task-validation-status { color: #855b17; border-color: #d7b36a; }
+.task-list li.rejected { background: #fff1ed; }
+.task-list li.rejected .task-validation-status, .reject-btn { color: var(--danger); }
+.validation-btn { padding: 6px 10px; font-size: 0.78rem; }
 .empty-state { color: var(--muted); font-size: 0.9rem; margin: 4px; }
 .hidden { display: none !important; }
 .exec-only { display: none; }
@@ -249,6 +255,36 @@ body.role-admin .exec-only { display: none !important; }
     font-size: 2.1rem;
     transform: rotate(-6deg);
     filter: drop-shadow(0 6px 6px rgba(0,0,0,0.15));
+}
+
+@media (max-width: 600px) {
+    body { padding: 16px 10px; }
+    .app, .role-card { max-width: none; }
+    .app-header { margin-bottom: 16px; }
+    .app-header-top { align-items: stretch; }
+    .app-header h1 { font-size: 1.45rem; }
+    .role-status { align-items: flex-start; width: 100%; }
+    .role-status .secondary-btn { width: 100%; min-height: 42px; }
+    .panel { padding: 14px 12px; margin-bottom: 12px; border-radius: 8px; }
+    .panel-head { align-items: flex-start; }
+    .inline-form, .pin-form-actions { flex-direction: column; align-items: stretch; }
+    .inline-form input, .inline-form select, .inline-form button, .inline-form label { width: 100%; min-height: 42px; }
+    .inline-form label { display: flex; align-items: center; }
+    button, select, input { font-size: 1rem; }
+    .person-list li, .task-list li, .history-list li, .building-row, .admin-manage-list li { flex-wrap: wrap; align-items: center; }
+    .person-name, .task-text, .building-name { min-width: 0; flex-basis: calc(100% - 24px); }
+    .person-building, .task-building { max-width: none; width: 100%; }
+    .task-list li .task-assignee, .task-list li .task-mode, .task-list li .task-validation-status { margin-top: 2px; }
+    .task-assignment { width: 100%; min-height: 42px; }
+    .task-list li .delete-btn { margin-left: auto; }
+    .validation-btn { flex: 1; min-height: 40px; }
+    .history-entry-head { flex-direction: column; gap: 3px; }
+    .history-assignments { font-size: 0.84rem; }
+    .building-row .secondary-btn { flex: 1; min-height: 40px; }
+    .building-row .delete-btn { min-height: 40px; }
+    .distribute-row { align-items: stretch; }
+    .distribute-row button { width: 100%; min-height: 44px; }
+    .role-card { padding: 24px 16px; }
 }
 
 @media (max-width: 420px) {

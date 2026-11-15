@@ -19,6 +19,8 @@ Faire évoluer l'application de gestion de tâches par foyer vers un espace d'in
 - Les bâtiments non déficitaires prennent les affectations communes restantes lorsque nécessaire.
 - L'administrateur peut ajouter, modifier, supprimer et affecter manuellement les tâches, gérer les personnes, les bâtiments et les absences.
 - Les résidents peuvent consulter leurs tâches et les marquer comme terminées.
+- Une validation sans photo est privilégiée : le résident déclare la tâche terminée, puis le responsable la valide ou la renvoie à refaire.
+- L'interface doit rester utilisable sur téléphone avec une seule colonne, des formulaires empilés et des actions adaptées au tactile.
 
 ## Modèle de données
 
@@ -78,3 +80,9 @@ Choix : **Tableau de permanence**.
 - `public/style.css`: cartes de bâtiments, badges de statut, résumé hebdomadaire.
 - `netlify/functions/api.js`: migration de données, routes et algorithme de rotation.
 - `README.md`: documentation du modèle internat et des règles de répartition.
+
+## Première amélioration validée
+
+- Remplacer la validation immédiate par un cycle `attribuée → déclarée terminée → validée / à refaire`.
+- Conserver `completed` pour la compatibilité des anciennes données et ajouter un statut de validation optionnel.
+- Corriger les incohérences de rendu et adapter les tâches, formulaires, bâtiments et historique aux petits écrans.

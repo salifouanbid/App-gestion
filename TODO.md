@@ -34,3 +34,10 @@
 - [ ] Les anciens codes d'accès et responsables continuent de fonctionner.
 - [ ] Les PIN restent hachés et les secrets restent uniquement dans les variables Netlify.
 - [ ] Les routes existantes de connexion, lecture et validation des tâches restent compatibles.
+
+## 7. Validation sans photo et mobile
+- [ ] Un résident peut déclarer une tâche terminée sans envoyer de photo.
+- [ ] Un responsable peut valider la déclaration ou la renvoyer « à refaire ».
+- [ ] Les anciennes tâches `completed` restent considérées comme validées.
+- [ ] Sur téléphone, les formulaires, tâches, bâtiments et historiques restent lisibles sans défilement horizontal.
+- [ ] Les contrôles tactiles restent accessibles et la section principale ne plante pas à cause d'un champ inexistant.

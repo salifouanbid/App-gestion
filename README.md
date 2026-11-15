@@ -21,6 +21,11 @@ superviser les internats créés.
   manuelle exclut la personne des autres affectations automatiques de la même
   répartition. Un bâtiment en déficit de résidents participe à la rotation
   commune une fois par mois.
+- **Validation sans photo** : un exécutant déclare la tâche terminée ; le
+  responsable la valide ou la renvoie à refaire. Les anciennes tâches
+  `completed` sont conservées comme validées.
+- **Responsive mobile** : les formulaires, tâches, bâtiments et historiques
+  s'empilent sur petit écran et restent utilisables au toucher.
 - **`netlify.toml`** : dit à Netlify où sont le site statique et les
   fonctions, et redirige `/api/*` vers la fonction.
 
