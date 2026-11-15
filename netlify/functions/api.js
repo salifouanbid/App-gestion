@@ -89,10 +89,12 @@ function normalizeHousehold(h) {
   h.buildings = h.buildings.map(b => ({ id: b.id || uid(), name: b.name || 'Bâtiment sans nom', common: !!b.common }));
   const defaultBuilding = h.buildings.find(b => !b.common) || fallback;
   if (!h.buildings.some(b => b.id === defaultBuilding.id)) h.buildings.unshift(defaultBuilding);
+  const residentialIds = new Set(h.buildings.filter(b => !b.common).map(b => b.id));
+  const buildingIds = new Set(h.buildings.map(b => b.id));
   if (!Array.isArray(h.persons)) h.persons = [];
-  h.persons = h.persons.map((p, i) => ({ ...p, color: p.color || COLORS[i % COLORS.length], present: p.present !== false, buildingId: p.buildingId || defaultBuilding.id }));
+  h.persons = h.persons.map((p, i) => ({ ...p, color: p.color || COLORS[i % COLORS.length], present: p.present !== false, buildingId: residentialIds.has(p.buildingId) ? p.buildingId : defaultBuilding.id }));
   if (!Array.isArray(h.tasks)) h.tasks = [];
-  h.tasks = h.tasks.map(t => ({ ...t, buildingId: t.buildingId || defaultBuilding.id, assignmentMode: t.assignmentMode || (t.assigneeId ? 'manual' : '') }));
+  h.tasks = h.tasks.map(t => ({ ...t, buildingId: buildingIds.has(t.buildingId) ? t.buildingId : defaultBuilding.id, assignmentMode: t.assignmentMode || (t.assigneeId ? 'manual' : '') }));
   if (!Array.isArray(h.history)) h.history = [];
   if (!h.weeklyRotation || typeof h.weeklyRotation !== 'object') h.weeklyRotation = { key: '', indexByBuilding: {} };
   if (typeof h.rotationOffset !== 'number') h.rotationOffset = 0;
@@ -166,8 +168,15 @@ function distribute(h) {
   const assignedPeople = new Set([...blockedByManual, ...assignedAuto]);
   const activePeopleCount = h.persons.filter(p => p.present).length;
   const remainingPeopleCount = h.persons.filter(p => p.present && !assignedPeople.has(p.id)).length;
-  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments, unassignedTaskIds, remainingPeopleCount, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
-  return { assignments, unassignedTaskIds, remainingPeopleCount, activePeopleCount, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
+  const totalAssignedCount = h.tasks.filter(t => !t.completed && !!t.assigneeId).length;
+  const assignmentSnapshot = h.tasks.filter(t => !t.completed && t.assigneeId).map(task => {
+    const person = h.persons.find(p => p.id === task.assigneeId);
+    const sourceBuilding = normalBuildings.find(b => b.id === person?.buildingId) || h.buildings.find(b => b.id === person?.buildingId);
+    const targetBuilding = h.buildings.find(b => b.id === task.buildingId);
+    return { taskId: task.id, taskText: task.text, personId: task.assigneeId, personName: person?.name || 'Personne supprimée', fromBuildingId: person?.buildingId || '', fromBuildingName: sourceBuilding?.name || 'Bâtiment inconnu', buildingId: task.buildingId, buildingName: targetBuilding?.name || 'Bâtiment inconnu', mode: task.assignmentMode || 'manuel' };
+  });
+  h.history.push({ id: uid(), date: new Date().toISOString(), weekKey, assignments: assignmentSnapshot, newAssignments: assignments.length, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, deficientBuildingIds: [...deficient], commonBuildingIds: commonBuildings.map(b => b.id) });
+  return { assignments: assignmentSnapshot, newAssignments: assignments.length, totalAssignedCount, unassignedTaskIds, remainingPeopleCount, activePeopleCount, deficient: normalBuildings.filter(b => deficient.has(b.id)).map(b => b.name), weekKey };
 }
 
 exports.handler = async (event) => {
