@@ -26,6 +26,18 @@ superviser les internats créés.
   `completed` sont conservées comme validées.
 - **Responsive mobile** : les formulaires, tâches, bâtiments et historiques
   s'empilent sur petit écran et restent utilisables au toucher.
+
+## Préparer les emails premium
+
+Pour envoyer les notifications, il faudra choisir un fournisseur d'emails
+transactionnels (par exemple Brevo ou Resend), vérifier un domaine d'envoi et
+configurer côté Netlify une clé API secrète ainsi qu'une adresse `EMAIL_FROM`.
+La clé ne doit jamais être placée dans `public/` ni envoyée dans GitHub.
+
+L'application devra ensuite enregistrer l'adresse du résident, son accord pour
+recevoir les notifications et sa préférence de fréquence. Les rappels planifiés
+nécessiteront une exécution programmée ; une simple ouverture de l'application
+ne suffit pas pour envoyer les emails à l'heure prévue.
 - **`netlify.toml`** : dit à Netlify où sont le site statique et les
   fonctions, et redirige `/api/*` vers la fonction.
 

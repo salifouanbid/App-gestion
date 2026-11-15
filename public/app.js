@@ -54,6 +54,10 @@
     }
 
     function isAdmin() { return role === 'admin' && !!currentAdminId; }
+    function currentAdminCanValidate(task) {
+        const admin = household?.admins?.find(a => a.id === currentAdminId);
+        return !!admin && (!admin.buildingId || admin.buildingId === task.buildingId);
+    }
 
     function persistSession(t, c, r, aId) {
         if (t) sessionStorage.setItem('chores.token', t); else sessionStorage.removeItem('chores.token');
@@ -425,6 +429,7 @@
                 <form id="addAdminForm" class="inline-form">
                     <input type="text" id="addAdminName" placeholder="Nom du nouveau responsable" required>
                     <input type="password" id="addAdminPin" placeholder="Son code PIN" autocomplete="off" required>
+                    <select id="addAdminBuilding"><option value="">Responsable général</option>${buildingOptions(true)}</select>
                     <button type="submit">Ajouter</button>
                 </form>
                 <p class="form-msg" id="addAdminMsg"></p>
@@ -521,10 +526,11 @@
             e.preventDefault();
             const nameVal = document.getElementById('addAdminName').value.trim();
             const pinVal = document.getElementById('addAdminPin').value.trim();
+            const buildingId = document.getElementById('addAdminBuilding').value;
             const msg = document.getElementById('addAdminMsg');
             if (!nameVal || !pinVal) return;
             try {
-                const data = await api(`/households/${code}/admins`, { method: 'POST', body: { name: nameVal, pin: pinVal } });
+                const data = await api(`/households/${code}/admins`, { method: 'POST', body: { name: nameVal, pin: pinVal, buildingId } });
                 household = data.household;
                 msg.style.color = 'var(--sage-dark)'; msg.textContent = `${nameVal} a été ajouté(e) comme responsable.`;
                 addAdminForm.reset();
@@ -612,7 +618,15 @@
             text.addEventListener('click', async () => {
                 if (role !== 'admin' && (task.completed || validationStatus === 'declared')) return;
                 try {
-                    const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: role === 'admin' ? !task.completed : true } });
+                    if (role !== 'admin') {
+                        const completionComment = prompt('Commentaire facultatif (matériel manquant, problème rencontré, etc.)', task.completionComment || '');
+                        if (completionComment === null) return;
+                        const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: true, completionComment } });
+                        household = data.household;
+                        renderApp();
+                        return;
+                    }
+                    const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: !task.completed } });
                     household = data.household;
                     renderApp();
                 } catch (err) { alert(err.message); }
@@ -627,11 +641,18 @@
             status.className = 'task-validation-status';
             status.textContent = validationStatus === 'validated' ? 'validée' : validationStatus === 'declared' ? 'à valider' : validationStatus === 'rejected' ? 'à refaire' : 'à faire';
             li.appendChild(status);
+            if (task.completionComment && (validationStatus === 'declared' || validationStatus === 'rejected')) {
+                const comment = document.createElement('span');
+                comment.className = 'task-comment'; comment.textContent = `Commentaire : ${task.completionComment}`;
+                li.appendChild(comment);
+            }
             if (role === 'exec' && !task.completed && validationStatus !== 'declared') {
                 const declare = document.createElement('button');
                 declare.className = 'secondary-btn validation-btn'; declare.textContent = 'Déclarer terminée';
                 declare.onclick = async () => {
-                    try { const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: true } }); household = data.household; renderApp(); }
+                    const completionComment = prompt('Commentaire facultatif (matériel manquant, problème rencontré, etc.)', task.completionComment || '');
+                    if (completionComment === null) return;
+                    try { const data = await api(`/households/${code}/tasks/${task.id}`, { method: 'PATCH', body: { completed: true, completionComment } }); household = data.household; renderApp(); }
                     catch (err) { alert(err.message); }
                 };
                 li.appendChild(declare);
@@ -654,7 +675,7 @@
                 } catch (err) { alert(err.message); }
             });
             li.appendChild(assignment);
-            if (role === 'admin' && validationStatus === 'declared') {
+            if (role === 'admin' && validationStatus === 'declared' && currentAdminCanValidate(task)) {
                 const validate = document.createElement('button');
                 validate.className = 'secondary-btn validation-btn'; validate.textContent = 'Valider';
                 validate.onclick = async () => {
@@ -710,6 +731,7 @@
                 const target = a.buildingName ? ` → ${a.buildingName}` : '';
                 const mode = a.mode ? ` (${a.mode})` : '';
                 line.append(personSpan, document.createTextNode((a.taskText || 'tâche') + target + mode));
+                if (a.completionComment) line.append(document.createTextNode(` — ${a.completionComment}`));
                 body.appendChild(line);
             });
             li.append(head, body);
@@ -764,6 +786,9 @@
                 name.appendChild(you);
             }
             li.appendChild(name);
+            const scope = document.createElement('span');
+            scope.className = 'admin-scope'; scope.textContent = admin.buildingId ? `bâtiment : ${buildingName(admin.buildingId)}` : 'responsable général';
+            li.appendChild(scope);
             if (household.admins.length > 1) {
                 const del = document.createElement('button');
                 del.className = 'delete-btn'; del.textContent = '×';

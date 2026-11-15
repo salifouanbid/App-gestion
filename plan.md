@@ -21,6 +21,8 @@ Faire évoluer l'application de gestion de tâches par foyer vers un espace d'in
 - Les résidents peuvent consulter leurs tâches et les marquer comme terminées.
 - Une validation sans photo est privilégiée : le résident déclare la tâche terminée, puis le responsable la valide ou la renvoie à refaire.
 - L'interface doit rester utilisable sur téléphone avec une seule colonne, des formulaires empilés et des actions adaptées au tactile.
+- Un résident peut ajouter un commentaire facultatif lors de sa déclaration, par exemple pour signaler un manque de matériel.
+- Un responsable rattaché à un bâtiment peut vérifier les tâches de son bâtiment ; un responsable général peut vérifier tous les bâtiments.
 
 ## Modèle de données
 

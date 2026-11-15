@@ -41,3 +41,7 @@
 - [ ] Les anciennes tâches `completed` restent considérées comme validées.
 - [ ] Sur téléphone, les formulaires, tâches, bâtiments et historiques restent lisibles sans défilement horizontal.
 - [ ] Les contrôles tactiles restent accessibles et la section principale ne plante pas à cause d'un champ inexistant.
+- [ ] La déclaration d'une tâche accepte un commentaire facultatif.
+- [ ] Le commentaire est visible au responsable lors de la vérification.
+- [ ] Un responsable peut être rattaché à un bâtiment.
+- [ ] Un responsable rattaché à un bâtiment ne peut valider ou refuser que les tâches de ce bâtiment.
